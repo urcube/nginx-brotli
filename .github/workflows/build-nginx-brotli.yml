@@ -1,0 +1,65 @@
+name: Build and Push Nginx Brotli
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 1. Build the image locally first
+      - name: Build local image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true # Loads it into the local Docker daemon instead of pushing
+          target: tester
+          tags: nginx-brotli-test:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 2. Validation
+      - name: Image Validation
+        run: |
+          # Start with the same sed injection used in your successful local test
+          docker run -d --name test-container nginx-brotli-test:latest \
+            sh -c "sed -i 's/location \/ {/location \/ { brotli on; brotli_types *;/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+          
+          sleep 5
+          docker exec test-container nginx -t
+          
+          RESPONSE=$(docker exec test-container curl -I -H "Accept-Encoding: br" http://localhost)
+          if echo "$RESPONSE" | grep -iq "content-encoding: br"; then
+            echo "Brotli compression verified!"
+          else
+            echo "Brotli header missing!"
+            exit 1
+          fi
+          docker stop test-container
+
+      # 3. Push if all tests passed
+      - name: Push verified image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          target: final
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/nginx-brotli:latest
