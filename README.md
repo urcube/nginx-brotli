@@ -1,7 +1,7 @@
 # Nginx Brotli Builder
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/urcube/nginx-brotli/docker-publish.yml?branch=main&label=build&style=flat-square)
-![Docker Pulls](https://img.shields.io/docker/pulls/urcb/nginx/brotli?style=flat-square)
+![Docker Pulls](https://img.shields.io/docker/pulls/urcb/nginx-brotli?style=flat-square)
 ![Docker Image Version](https://img.shields.io/docker/v/urcb/nginx-brotli/latest?label=nginx&style=flat-square&logo=nginx)
 ![License](https://img.shields.io/github/license/urcube/nginx-brotli?style=flat-square)
 
